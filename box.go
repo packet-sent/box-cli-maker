@@ -422,3 +422,48 @@ func (b Box) Println(title, lines string) {
 	lines2 = append(lines2, strings.Split(lines, n1)...)
 	color.Printf("\n%s\n", b.toString(title, lines2))
 }
+
+// Output the string of the Box print
+func (b Box) Sprintf(title, lines string) string {
+	var lines2 []string
+
+	// Allow Wrapping according to the user
+	if b.AllowWrapping {
+		// If limit not provided then use 2*TermWidth/3 as limit else
+		// use the one provided
+		if b.WrappingLimit != 0 {
+			lines = wrap.String(lines, b.WrappingLimit)
+		} else {
+			width, _, err := term.GetSize(int(os.Stdout.Fd()))
+			if err != nil {
+				log.Fatal(err)
+			}
+			lines = wrap.String(lines, 2*width/3)
+		}
+	}
+
+	// Obtain Title and Content color
+	title = b.obtainTitleColor(title)
+	lines = b.obtainContentColor(lines)
+
+	// Default Position is Inside, if invalid position is given then just raise a warning
+	// then use Default Position which is Inside
+	if b.TitlePos == "" {
+		b.TitlePos = inside
+	} else if b.TitlePos != inside && b.TitlePos != "Bottom" && b.TitlePos != "Top" {
+		errorMsg("[warning]: invalid value provided for TitlePos, using default")
+		b.TitlePos = inside
+	}
+	// if Title is empty then TitlePos should be Inside
+	if title != "" {
+		if b.TitlePos != inside && strings.Contains(title, "\n") {
+			panic("Multilines are only supported inside only")
+		}
+		if b.TitlePos == inside {
+			lines2 = append(lines2, strings.Split(title, n1)...)
+			lines2 = append(lines2, []string{""}...) // for empty line between title and content
+		}
+	}
+	lines2 = append(lines2, strings.Split(lines, n1)...)
+	return b.toString(title, lines2)
+}
